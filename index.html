@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Writer · download & local storage</title>
+    <!-- PDF-lib for creating PDFs -->
+    <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+        }
+        body {
+            background: #f2f5f9;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .app-card {
+            max-width: 900px;
+            width: 100%;
+            background: white;
+            border-radius: 28px;
+            box-shadow: 0 20px 40px -12px rgba(0, 20, 40, 0.25);
+            padding: 30px 30px 35px;
+            transition: all 0.2s;
+        }
+        h1 {
+            font-size: 2rem;
+            font-weight: 600;
+            margin: 0 0 8px 0;
+            color: #0b2b4b;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            letter-spacing: -0.01em;
+        }
+        h1 span {
+            background: #e8edf5;
+            border-radius: 50px;
+            padding: 6px 16px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #1e4c7a;
+            letter-spacing: 0.02em;
+            margin-left: auto;
+        }
+        .subhead {
+            color: #4d6278;
+            margin-top: -4px;
+            margin-bottom: 24px;
+            font-size: 1rem;
+            border-left: 4px solid #8ab3e0;
+            padding-left: 16px;
+        }
+        .writer-area {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        textarea {
+            width: 100%;
+            min-height: 280px;
+            padding: 20px 22px;
+            font-size: 1.05rem;
+            line-height: 1.6;
+            border: 1.5px solid #d9e2ec;
+            border-radius: 20px;
+            background: #fbfdff;
+            resize: vertical;
+            outline: none;
+            transition: 0.2s;
+            color: #0d1c2e;
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+            box-shadow: inset 0 2px 6px rgba(0,0,0,0.02);
+        }
+        textarea:focus {
+            border-color: #3b7bb7;
+            box-shadow: 0 0 0 4px rgba(59, 123, 183, 0.15), inset 0 2px 6px rgba(0,0,0,0.02);
+            background: #ffffff;
+        }
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 12px;
+        }
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 9px;
+            background: white;
+            border: 1.5px solid #cbd7e6;
+            color: #1a3d60;
+            font-weight: 500;
+            font-size: 1rem;
+            padding: 12px 24px;
+            border-radius: 60px;
+            cursor: pointer;
+            transition: all 0.15s;
+            box-shadow: 0 4px 6px -2px rgba(0,0,0,0.02);
+            letter-spacing: 0.01em;
+            flex: 0 0 auto;
+        }
+        button i {
+            font-style: normal;
+            font-size: 1.2rem;
+            line-height: 1;
+        }
+        button:hover {
+            background: #f5faff;
+            border-color: #7ea6ce;
+            transform: translateY(-1px);
+            box-shadow: 0 8px 14px -6px rgba(30, 70, 120, 0.2);
+        }
+        button:active {
+            transform: translateY(1px);
+            box-shadow: none;
+        }
+        .btn-primary {
+            background: #1a4f7a;
+            border: 1.5px solid #1a4f7a;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #0f3b60;
+            border-color: #0f3b60;
+        }
+        .btn-storage {
+            background: #e2eaf3;
+            border-color: #bbd0e3;
+            color: #153b5c;
+        }
+        .btn-storage:hover {
+            background: #d2e0ee;
+            border-color: #8fb3d1;
+        }
+        .status {
+            margin-top: 24px;
+            font-size: 0.95rem;
+            background: #f0f6fd;
+            border-radius: 40px;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #2b4b6e;
+            border: 1px solid #d0e0f0;
+            transition: 0.2s;
+            min-height: 56px;
+        }
+        .status .icon {
+            font-size: 1.4rem;
+        }
+        .status.success {
+            background: #e3f5e9;
+            border-color: #a8d5b8;
+            color: #1b6b3a;
+        }
+        .status.warning {
+            background: #fff3e0;
+            border-color: #f0cf9f;
+            color: #8a5d1f;
+        }
+        .footer-note {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            color: #718da8;
+            margin-top: 16px;
+            padding: 0 6px;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-card">
+        <h1>
+            📄 PDF writer
+            <span>pdf-lib</span>
+        </h1>
+        <div class="subhead">
+            Type or paste your content → download as PDF → or save to local storage
+        </div>
+
+        <div class="writer-area">
+            <textarea id="contentInput" placeholder="Write something here… e.g. 'Hello world! This is my PDF document.'">PDF created with PDF Writer ✨
+            
+This text is stored in local storage when you click 'Save to LocalStorage'.
+Download generates a real PDF file using pdf-lib.</textarea>
+
+            <div class="toolbar">
+                <div class="btn-group">
+                    <button id="downloadPdfBtn" class="btn-primary" title="Download as PDF file">
+                        <i>⬇️</i> Download PDF
+                    </button>
+                    <button id="saveToStorageBtn" class="btn-storage" title="Save current text to browser local storage">
+                        <i>💾</i> Save to LocalStorage
+                    </button>
+                    <button id="loadFromStorageBtn" title="Load text from local storage">
+                        <i>📂</i> Load from LocalStorage
+                    </button>
+                    <button id="clearStorageBtn" title="Remove saved text from local storage">
+                        <i>🗑️</i> Clear Saved
+                    </button>
+                </div>
+            </div>
+
+            <div id="statusMessage" class="status">
+                <span class="icon">📌</span>
+                <span id="statusText">Ready. Write something and click 'Download PDF' or save to local storage.</span>
+            </div>
+        </div>
+        <div class="footer-note">
+            <span>⬇️ PDF generated client‑side</span>
+            <span>💾 LocalStorage key: <code>pdf_writer_content</code></span>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            // ---------- DOM refs ----------
+            const contentInput = document.getElementById('contentInput');
+            const downloadBtn = document.getElementById('downloadPdfBtn');
+            const saveBtn = document.getElementById('saveToStorageBtn');
+            const loadBtn = document.getElementById('loadFromStorageBtn');
+            const clearBtn = document.getElementById('clearStorageBtn');
+            const statusDiv = document.getElementById('statusMessage');
+            const statusText = document.getElementById('statusText');
+            const iconSpan = statusDiv.querySelector('.icon');
+
+            // ---------- Constants ----------
+            const STORAGE_KEY = 'pdf_writer_content';
+            // Default text (also used when nothing loaded)
+            const DEFAULT_TEXT = `PDF created with PDF Writer ✨
+
+This text is stored in local storage when you click 'Save to LocalStorage'.
+Download generates a real PDF file using pdf-lib.`;
+
+            // ---------- Helper: update status ----------
+            function setStatus(message, type = 'info') {
+                // type: 'info', 'success', 'warning'
+                statusText.textContent = message;
+                statusDiv.classList.remove('success', 'warning');
+                if (type === 'success') {
+                    statusDiv.classList.add('success');
+                    iconSpan.textContent = '✅';
+                } else if (type === 'warning') {
+                    statusDiv.classList.add('warning');
+                    iconSpan.textContent = '⚠️';
+                } else {
+                    iconSpan.textContent = '📌';
+                }
+                // Auto reset icon after 2.5 sec if success/warning? we keep as is.
+            }
+
+            // Reset to info icon after some time (optional)
+            function resetStatusIconLater() {
+                // Not strictly needed, but nice: after 3 sec, remove extra classes and set info icon.
+                // But we want the message to stay, so we only downgrade the icon/class slowly? 
+                // We'll keep it simple: only change when new status occurs.
+            }
+
+            // ---------- 1. Download as PDF (using pdf-lib) ----------
+            async function downloadPdf() {
+                const text = contentInput.value.trim();
+                if (!text) {
+                    setStatus('Cannot create PDF: text area is empty.', 'warning');
+                    return;
+                }
+
+                try {
+                    setStatus('Generating PDF…', 'info');
+                    // pdf-lib access via window.PDFLib
+                    const { PDFDocument, StandardFonts, rgb } = window.PDFLib;
+
+                    // Create a new PDF document
+                    const pdfDoc = await PDFDocument.create();
+                    // Embed the standard font (Helvetica)
+                    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+                    
+                    // Page dimensions (A4: 595.28 x 841.89 points)
+                    const pageWidth = 595.28;
+                    const pageHeight = 841.89;
+                    const margin = 56; // ~2cm margin
+                    const fontSize = 12;
+                    const lineHeight = fontSize * 1.5; // 18
+                    const maxWidth = pageWidth - 2 * margin; // 483.28
+
+                    // Split text into lines (handle explicit newlines)
+                    const rawLines = text.split(/\r?\n/);
+                    
+                    // We'll wrap each raw line to fit maxWidth
+                    const wrappedLines = [];
+                    for (let line of rawLines) {
+                        if (line.trim() === '') {
+                            // preserve empty lines
+                            wrappedLines.push('');
+                            continue;
+                        }
+                        // Split into words (but keep spaces for wrapping)
+                        const words = line.split(/(\s+)/); // keeps whitespace as tokens
+                        let currentLine = '';
+                        
+                        for (let token of words) {
+                            if (token === '') continue;
+                            const testLine = currentLine + token;
+                            const testWidth = font.widthOfTextAtSize(testLine, fontSize);
+                            
+                            if (testWidth <= maxWidth) {
+                                currentLine = testLine;
+                            } else {
+                                // If currentLine is not empty, push it and start new line with token
+                                if (currentLine.trim() !== '') {
+                                    wrappedLines.push(currentLine.trimEnd()); // trim trailing spaces
+                                    currentLine = token;
+                                } else {
+                                    // Very long word or token: break it arbitrarily (basic handling)
+                                    // We'll split the token if it's longer than maxWidth
+                                    if (font.widthOfTextAtSize(token, fontSize) > maxWidth) {
+                                        // break token into chunks
+                                        let remaining = token;
+                                        while (remaining.length > 0) {
+                                            let chunk = '';
+                                            for (let i = 1; i <= remaining.length; i++) {
+                                                const sub = remaining.substring(0, i);
+                                                if (font.widthOfTextAtSize(sub, fontSize) <= maxWidth) {
+                                                    chunk = sub;
+                                                } else {
+                                                    break;
+                                                }
+                                            }
+                                            if (chunk === '') chunk = remaining.charAt(0); // fallback
+                                            wrappedLines.push(chunk);
+                                            remaining = remaining.substring(chunk.length);
+                                        }
+                                        currentLine = '';
+                                    } else {
+                                        // token fits on its own line but currentLine is empty? 
+                                        // Actually currentLine might be empty, push token as line
+                                        wrappedLines.push(token);
+                                        currentLine = '';
+                                    }
+                                }
+                            }
+                        }
+                        // push remaining currentLine
+                        if (currentLine.trim() !== '') {
+                            wrappedLines.push(currentLine.trimEnd());
+                        } else if (currentLine === '' && line === '') {
+                            // already handled empty line
+                        }
+                    }
+
+                    // If no wrapped lines (empty text?) we should have at least one line
+                    if (wrappedLines.length === 0) {
+                        wrappedLines.push(' ');
+                    }
+
+                    // Now create pages
+                    let page = pdfDoc.addPage([pageWidth, pageHeight]);
+                    let y = pageHeight - margin; // start at top margin
+
+                    for (let i = 0; i < wrappedLines.length; i++) {
+                        const lineText = wrappedLines[i];
+                        // Check if we need a new page (if y - lineHeight < margin)
+                        if (y - lineHeight < margin) {
+                            // add new page
+                            page = pdfDoc.addPage([pageWidth, pageHeight]);
+                            y = pageHeight - margin;
+                        }
+
+                        // Draw the line if not completely empty (avoid drawing empty strings)
+                        if (lineText.trim() !== '') {
+                            page.drawText(lineText, {
+                                x: margin,
+                                y: y - fontSize, // adjust baseline
+                                size: fontSize,
+                                font: font,
+                                color: rgb(0.1, 0.1, 0.15),
+                            });
+                        } else {
+                            // for empty lines, we still consume vertical space
+                            // but we don't draw
+                        }
+                        
+                        y -= lineHeight;
+                    }
+
+                    // If no page has been added? Already added at least one.
+                    // Serialize the PDF to bytes
+                    const pdfBytes = await pdfDoc.save();
+
+                    // Create a Blob and download
+                    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `pdf-writer-${Date.now()}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    // Clean up
+                    setTimeout(() => URL.revokeObjectURL(url), 1500);
+
+                    setStatus('PDF downloaded successfully!', 'success');
+                } catch (error) {
+                    console.error('PDF generation error:', error);
+                    setStatus('Error generating PDF: ' + (error.message || 'unknown'), 'warning');
+                }
+            }
+
+            // ---------- 2. Save to LocalStorage ----------
+            function saveToLocalStorage() {
+                const text = contentInput.value;
+                try {
+                    localStorage.setItem(STORAGE_KEY, text);
+                    setStatus('Content saved to localStorage.', 'success');
+                } catch (e) {
+                    // localStorage might be full or disabled
+                    setStatus('Failed to save: ' + e.message, 'warning');
+                }
+            }
+
+            // ---------- 3. Load from LocalStorage ----------
+            function loadFromLocalStorage() {
+                try {
+                    const saved = localStorage.getItem(STORAGE_KEY);
+                    if (saved !== null) {
+                        contentInput.value = saved;
+                        setStatus('Loaded saved content from localStorage.', 'success');
+                    } else {
+                        setStatus('No saved content found in localStorage.', 'warning');
+                    }
+                } catch (e) {
+                    setStatus('Error reading localStorage: ' + e.message, 'warning');
+                }
+            }
+
+            // ---------- 4. Clear saved local storage ----------
+            function clearSavedStorage() {
+                try {
+                    localStorage.removeItem(STORAGE_KEY);
+                    // If current text is exactly the default? We do not change the text area.
+                    setStatus('Saved content removed from localStorage.', 'success');
+                } catch (e) {
+                    setStatus('Error clearing storage: ' + e.message, 'warning');
+                }
+            }
+
+            // ---------- 5. Initialize: optionally load saved content on page load? ----------
+            // We will load saved content if exists, otherwise leave default.
+            function initializeFromStorage() {
+                try {
+                    const saved = localStorage.getItem(STORAGE_KEY);
+                    if (saved !== null) {
+                        contentInput.value = saved;
+                        setStatus('Loaded previous content from localStorage.', 'info');
+                    } else {
+                        // keep default text
+                        setStatus('Ready. Write something and click Download PDF.', 'info');
+                    }
+                } catch (e) {
+                    // localStorage error (e.g., disabled)
+                    setStatus('LocalStorage unavailable, using default text.', 'warning');
+                    // ensure default text if not set
+                    if (!contentInput.value) contentInput.value = DEFAULT_TEXT;
+                }
+            }
+
+            // ---------- Attach event listeners ----------
+            downloadBtn.addEventListener('click', downloadPdf);
+            saveBtn.addEventListener('click', saveToLocalStorage);
+            loadBtn.addEventListener('click', loadFromLocalStorage);
+            clearBtn.addEventListener('click', clearSavedStorage);
+
+            // Bonus: Auto-save on window unload? Not required, skip to avoid confusion.
+
+            // Initialize
+            initializeFromStorage();
+
+            // Small UX: Pressing Ctrl+Enter downloads (optional)
+            contentInput.addEventListener('keydown', (e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                    e.preventDefault();
+                    downloadPdf();
+                }
+            });
+
+            // Make sure that if user manually clears text area, we don't auto-save etc.
+            // (No action needed)
+
+            // Ensure status icon resets to info after a while? We can do a simple timer
+            // but not necessary. However, we can add a small click-to-dismiss? Not needed.
+        })();
+    </script>
+</body>
+  </html>

@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PDF Writer · download & local storage</title>
-    <meta name="description" content="A simple in-browser PDF writer. Type text, download as PDF, and save to local storage.">
+    <title>Book PDF Writer · download & local storage</title>
+    <meta name="description" content="Create book-style PDFs in your browser. Type text, download as a beautifully formatted PDF book, and save to local storage.">
     <!-- PDF-lib for creating PDFs -->
     <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
     <style>
@@ -13,7 +13,7 @@
             font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
         }
         body {
-            background: #f2f5f9;
+            background: linear-gradient(135deg, #f5efe6 0%, #e8e0d3 100%);
             margin: 0;
             min-height: 100vh;
             display: flex;
@@ -22,41 +22,82 @@
             padding: 20px;
         }
         .app-card {
-            max-width: 900px;
+            max-width: 960px;
             width: 100%;
-            background: white;
-            border-radius: 28px;
-            box-shadow: 0 20px 40px -12px rgba(0, 20, 40, 0.25);
-            padding: 30px 30px 35px;
+            background: #fffdf9;
+            border-radius: 20px;
+            box-shadow: 0 25px 50px -12px rgba(60, 40, 20, 0.35), 0 0 0 1px rgba(120, 90, 60, 0.08);
+            padding: 32px 34px 38px;
             transition: all 0.2s;
+            border: 1px solid #e8ddce;
         }
         h1 {
             font-size: 2rem;
-            font-weight: 600;
+            font-weight: 700;
             margin: 0 0 8px 0;
-            color: #0b2b4b;
+            color: #4a2e1e;
             display: flex;
             align-items: center;
             gap: 12px;
             letter-spacing: -0.01em;
+            font-family: Georgia, 'Times New Roman', serif;
         }
         h1 span {
-            background: #e8edf5;
+            background: #f3e9d9;
             border-radius: 50px;
             padding: 6px 16px;
-            font-size: 0.9rem;
-            font-weight: 500;
-            color: #1e4c7a;
-            letter-spacing: 0.02em;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #7a5230;
+            letter-spacing: 0.03em;
             margin-left: auto;
+            font-family: system-ui, sans-serif;
+            border: 1px solid #e2d2bd;
         }
         .subhead {
-            color: #4d6278;
+            color: #7a6045;
             margin-top: -4px;
             margin-bottom: 24px;
-            font-size: 1rem;
-            border-left: 4px solid #8ab3e0;
+            font-size: 0.98rem;
+            border-left: 4px solid #b98c5a;
             padding-left: 16px;
+            font-family: Georgia, serif;
+            font-style: italic;
+        }
+        .cover-preview {
+            background: #f7f0e4;
+            border: 1px dashed #cbb492;
+            border-radius: 12px;
+            padding: 14px 18px;
+            margin-bottom: 18px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+            align-items: center;
+            font-size: 0.88rem;
+            color: #6b4f33;
+        }
+        .cover-preview label {
+            font-weight: 600;
+            color: #4a2e1e;
+            font-family: Georgia, serif;
+            white-space: nowrap;
+        }
+        .cover-preview input {
+            flex: 1;
+            min-width: 160px;
+            padding: 8px 14px;
+            border: 1px solid #d6c3a8;
+            border-radius: 30px;
+            font-size: 0.9rem;
+            background: white;
+            color: #3b2a1a;
+            outline: none;
+            font-family: Georgia, serif;
+        }
+        .cover-preview input:focus {
+            border-color: #b98c5a;
+            box-shadow: 0 0 0 3px rgba(185, 140, 90, 0.15);
         }
         .writer-area {
             display: flex;
@@ -65,23 +106,23 @@
         }
         textarea {
             width: 100%;
-            min-height: 280px;
-            padding: 20px 22px;
+            min-height: 300px;
+            padding: 22px 26px;
             font-size: 1.05rem;
-            line-height: 1.6;
-            border: 1.5px solid #d9e2ec;
-            border-radius: 20px;
-            background: #fbfdff;
+            line-height: 1.7;
+            border: 1.5px solid #d9c9b2;
+            border-radius: 14px;
+            background: #fffdf8;
             resize: vertical;
             outline: none;
             transition: 0.2s;
-            color: #0d1c2e;
-            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
-            box-shadow: inset 0 2px 6px rgba(0,0,0,0.02);
+            color: #2e1f12;
+            font-family: Georgia, 'Times New Roman', serif;
+            box-shadow: inset 0 2px 8px rgba(100, 70, 40, 0.05);
         }
         textarea:focus {
-            border-color: #3b7bb7;
-            box-shadow: 0 0 0 4px rgba(59, 123, 183, 0.15), inset 0 2px 6px rgba(0,0,0,0.02);
+            border-color: #b98c5a;
+            box-shadow: 0 0 0 4px rgba(185, 140, 90, 0.12), inset 0 2px 8px rgba(100, 70, 40, 0.05);
             background: #ffffff;
         }
         .toolbar {
@@ -90,7 +131,7 @@
             gap: 14px;
             justify-content: space-between;
             align-items: center;
-            margin-top: 12px;
+            margin-top: 14px;
         }
         .btn-group {
             display: flex;
@@ -103,129 +144,153 @@
             justify-content: center;
             gap: 9px;
             background: white;
-            border: 1.5px solid #cbd7e6;
-            color: #1a3d60;
-            font-weight: 500;
-            font-size: 1rem;
+            border: 1.5px solid #d3c1a8;
+            color: #4a2e1e;
+            font-weight: 600;
+            font-size: 0.95rem;
             padding: 12px 24px;
             border-radius: 60px;
             cursor: pointer;
             transition: all 0.15s;
-            box-shadow: 0 4px 6px -2px rgba(0,0,0,0.02);
+            box-shadow: 0 4px 6px -2px rgba(90, 60, 30, 0.08);
             letter-spacing: 0.01em;
             flex: 0 0 auto;
+            font-family: system-ui, sans-serif;
         }
         button i {
             font-style: normal;
-            font-size: 1.2rem;
+            font-size: 1.15rem;
             line-height: 1;
         }
         button:hover {
-            background: #f5faff;
-            border-color: #7ea6ce;
+            background: #fdf6ec;
+            border-color: #b98c5a;
             transform: translateY(-1px);
-            box-shadow: 0 8px 14px -6px rgba(30, 70, 120, 0.2);
+            box-shadow: 0 10px 16px -8px rgba(120, 80, 40, 0.3);
         }
         button:active {
             transform: translateY(1px);
             box-shadow: none;
         }
         .btn-primary {
-            background: #1a4f7a;
-            border: 1.5px solid #1a4f7a;
-            color: white;
+            background: #6b4226;
+            border: 1.5px solid #6b4226;
+            color: #fff8ee;
         }
         .btn-primary:hover {
-            background: #0f3b60;
-            border-color: #0f3b60;
+            background: #57351d;
+            border-color: #57351d;
+            color: #ffffff;
         }
         .btn-storage {
-            background: #e2eaf3;
-            border-color: #bbd0e3;
-            color: #153b5c;
+            background: #f0e6d6;
+            border-color: #d3c1a8;
+            color: #5a3d22;
         }
         .btn-storage:hover {
-            background: #d2e0ee;
-            border-color: #8fb3d1;
+            background: #e8dbc7;
+            border-color: #b98c5a;
         }
         .status {
             margin-top: 24px;
-            font-size: 0.95rem;
-            background: #f0f6fd;
+            font-size: 0.93rem;
+            background: #f7f0e4;
             border-radius: 40px;
-            padding: 12px 20px;
+            padding: 14px 22px;
             display: flex;
             align-items: center;
             gap: 12px;
-            color: #2b4b6e;
-            border: 1px solid #d0e0f0;
+            color: #5a3d22;
+            border: 1px solid #e2d2bd;
             transition: 0.2s;
             min-height: 56px;
+            font-family: Georgia, serif;
         }
         .status .icon {
-            font-size: 1.4rem;
+            font-size: 1.3rem;
         }
         .status.success {
-            background: #e3f5e9;
-            border-color: #a8d5b8;
-            color: #1b6b3a;
+            background: #e8f2e4;
+            border-color: #b3d1a4;
+            color: #3d6b2a;
         }
         .status.warning {
-            background: #fff3e0;
-            border-color: #f0cf9f;
+            background: #fbf0dd;
+            border-color: #e8c98a;
             color: #8a5d1f;
         }
         .footer-note {
             display: flex;
             justify-content: space-between;
-            font-size: 0.85rem;
-            color: #718da8;
-            margin-top: 16px;
+            font-size: 0.82rem;
+            color: #9c876b;
+            margin-top: 18px;
             padding: 0 6px;
+            font-family: Georgia, serif;
+            font-style: italic;
+        }
+        @media (max-width: 640px) {
+            .app-card { padding: 22px 18px 28px; }
+            h1 { font-size: 1.6rem; }
+            button { padding: 10px 18px; font-size: 0.88rem; }
         }
     </style>
 </head>
 <body>
     <div class="app-card">
         <h1>
-            📄 PDF writer
+            📖 Book PDF Writer
             <span>pdf-lib</span>
         </h1>
         <div class="subhead">
-            Type or paste your content → download as PDF → or save to local storage
+            Turn your text into a beautifully formatted book-style PDF with cover, page numbers & headers
+        </div>
+
+        <div class="cover-preview">
+            <label>📕 Book Title:</label>
+            <input type="text" id="bookTitle" placeholder="Untitled Book" value="My Book">
+            <label>✍️ Author:</label>
+            <input type="text" id="bookAuthor" placeholder="Anonymous" value="Anonymous">
         </div>
 
         <div class="writer-area">
-            <textarea id="contentInput" placeholder="Write something here… e.g. 'Hello world! This is my PDF document.'">PDF created with PDF Writer ✨
-            
-This text is stored in local storage when you click 'Save to LocalStorage'.
-Download generates a real PDF file using pdf-lib.</textarea>
+            <textarea id="contentInput" placeholder="Write your book content here… Each line break starts a new paragraph.">Chapter One
+
+It was a bright cold day in April, and the clocks were striking thirteen. The wind whistled through the ancient oaks, carrying whispers of stories long forgotten.
+
+The old library stood at the edge of town, its stone walls covered in ivy that had grown unchecked for decades. Inside, thousands of books lined the shelves, each one holding a world of its own.
+
+Chapter Two
+
+Maya pushed open the heavy oak door, and the smell of old paper and leather filled her senses. She had been searching for this place her entire life — a library that only appeared to those who truly needed it.
+
+On the central table lay a single book, bound in deep blue leather with gold lettering. It had no title, but she knew instinctively that it was meant for her.</textarea>
 
             <div class="toolbar">
                 <div class="btn-group">
-                    <button id="downloadPdfBtn" class="btn-primary" title="Download as PDF file">
-                        <i>⬇️</i> Download PDF
+                    <button id="downloadPdfBtn" class="btn-primary" title="Download as book-style PDF">
+                        <i>📖</i> Download as Book PDF
                     </button>
                     <button id="saveToStorageBtn" class="btn-storage" title="Save current text to browser local storage">
-                        <i>💾</i> Save to LocalStorage
+                        <i>💾</i> Save
                     </button>
                     <button id="loadFromStorageBtn" title="Load text from local storage">
-                        <i>📂</i> Load from LocalStorage
+                        <i>📂</i> Load
                     </button>
                     <button id="clearStorageBtn" title="Remove saved text from local storage">
-                        <i>🗑️</i> Clear Saved
+                        <i>🗑️</i> Clear
                     </button>
                 </div>
             </div>
 
             <div id="statusMessage" class="status">
                 <span class="icon">📌</span>
-                <span id="statusText">Ready. Write something and click 'Download PDF' or save to local storage.</span>
+                <span id="statusText">Ready. Write your book and click "Download as Book PDF".</span>
             </div>
         </div>
         <div class="footer-note">
-            <span>⬇️ PDF generated client‑side</span>
-            <span>💾 LocalStorage key: <code>pdf_writer_content</code></span>
+            <span>📖 Book‑style PDF: cover page, headers, page numbers</span>
+            <span>💾 LocalStorage key: <code>book_pdf_content</code></span>
         </div>
     </div>
 
@@ -233,6 +298,8 @@ Download generates a real PDF file using pdf-lib.</textarea>
         (function() {
             // ---------- DOM refs ----------
             const contentInput = document.getElementById('contentInput');
+            const bookTitleInput = document.getElementById('bookTitle');
+            const bookAuthorInput = document.getElementById('bookAuthor');
             const downloadBtn = document.getElementById('downloadPdfBtn');
             const saveBtn = document.getElementById('saveToStorageBtn');
             const loadBtn = document.getElementById('loadFromStorageBtn');
@@ -242,11 +309,20 @@ Download generates a real PDF file using pdf-lib.</textarea>
             const iconSpan = statusDiv.querySelector('.icon');
 
             // ---------- Constants ----------
-            const STORAGE_KEY = 'pdf_writer_content';
-            const DEFAULT_TEXT = `PDF created with PDF Writer ✨
+            const STORAGE_KEY = 'book_pdf_content';
+            const STORAGE_TITLE_KEY = 'book_pdf_title';
+            const STORAGE_AUTHOR_KEY = 'book_pdf_author';
+            const DEFAULT_TEXT = `Chapter One
 
-This text is stored in local storage when you click 'Save to LocalStorage'.
-Download generates a real PDF file using pdf-lib.`;
+It was a bright cold day in April, and the clocks were striking thirteen. The wind whistled through the ancient oaks, carrying whispers of stories long forgotten.
+
+The old library stood at the edge of town, its stone walls covered in ivy that had grown unchecked for decades. Inside, thousands of books lined the shelves, each one holding a world of its own.
+
+Chapter Two
+
+Maya pushed open the heavy oak door, and the smell of old paper and leather filled her senses. She had been searching for this place her entire life — a library that only appeared to those who truly needed it.
+
+On the central table lay a single book, bound in deep blue leather with gold lettering. It had no title, but she knew instinctively that it was meant for her.`;
 
             // ---------- Helper: update status ----------
             function setStatus(message, type = 'info') {
@@ -263,131 +339,403 @@ Download generates a real PDF file using pdf-lib.`;
                 }
             }
 
-            // ---------- 1. Download as PDF (using pdf-lib) ----------
-            async function downloadPdf() {
-                const text = contentInput.value.trim();
-                if (!text) {
-                    setStatus('Cannot create PDF: text area is empty.', 'warning');
-                    return;
-                }
+            // ---------- Helper: wrap text to fit width ----------
+            function wrapText(text, font, fontSize, maxWidth) {
+                const wrappedLines = [];
+                const rawLines = text.split(/\r?\n/);
 
-                try {
-                    setStatus('Generating PDF…', 'info');
-                    const { PDFDocument, StandardFonts, rgb } = window.PDFLib;
+                for (let line of rawLines) {
+                    if (line.trim() === '') {
+                        wrappedLines.push('');
+                        continue;
+                    }
 
-                    const pdfDoc = await PDFDocument.create();
-                    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-                    
-                    const pageWidth = 595.28;
-                    const pageHeight = 841.89;
-                    const margin = 56;
-                    const fontSize = 12;
-                    const lineHeight = fontSize * 1.5;
-                    const maxWidth = pageWidth - 2 * margin;
+                    const words = line.split(/(\s+)/);
+                    let currentLine = '';
 
-                    const rawLines = text.split(/\r?\n/);
-                    const wrappedLines = [];
+                    for (let token of words) {
+                        if (token === '') continue;
+                        const testLine = currentLine + token;
+                        const testWidth = font.widthOfTextAtSize(testLine, fontSize);
 
-                    for (let line of rawLines) {
-                        if (line.trim() === '') {
-                            wrappedLines.push('');
-                            continue;
-                        }
-                        const words = line.split(/(\s+)/);
-                        let currentLine = '';
-                        
-                        for (let token of words) {
-                            if (token === '') continue;
-                            const testLine = currentLine + token;
-                            const testWidth = font.widthOfTextAtSize(testLine, fontSize);
-                            
-                            if (testWidth <= maxWidth) {
-                                currentLine = testLine;
+                        if (testWidth <= maxWidth) {
+                            currentLine = testLine;
+                        } else {
+                            if (currentLine.trim() !== '') {
+                                wrappedLines.push(currentLine.trimEnd());
+                                currentLine = token;
                             } else {
-                                if (currentLine.trim() !== '') {
-                                    wrappedLines.push(currentLine.trimEnd());
-                                    currentLine = token;
-                                } else {
-                                    if (font.widthOfTextAtSize(token, fontSize) > maxWidth) {
-                                        let remaining = token;
-                                        while (remaining.length > 0) {
-                                            let chunk = '';
-                                            for (let i = 1; i <= remaining.length; i++) {
-                                                const sub = remaining.substring(0, i);
-                                                if (font.widthOfTextAtSize(sub, fontSize) <= maxWidth) {
-                                                    chunk = sub;
-                                                } else {
-                                                    break;
-                                                }
+                                // Handle very long single word
+                                if (font.widthOfTextAtSize(token, fontSize) > maxWidth) {
+                                    let remaining = token;
+                                    while (remaining.length > 0) {
+                                        let chunk = '';
+                                        for (let i = 1; i <= remaining.length; i++) {
+                                            const sub = remaining.substring(0, i);
+                                            if (font.widthOfTextAtSize(sub, fontSize) <= maxWidth) {
+                                                chunk = sub;
+                                            } else {
+                                                break;
                                             }
-                                            if (chunk === '') chunk = remaining.charAt(0);
-                                            wrappedLines.push(chunk);
-                                            remaining = remaining.substring(chunk.length);
                                         }
-                                        currentLine = '';
-                                    } else {
-                                        wrappedLines.push(token);
-                                        currentLine = '';
+                                        if (chunk === '') chunk = remaining.charAt(0);
+                                        wrappedLines.push(chunk);
+                                        remaining = remaining.substring(chunk.length);
                                     }
+                                    currentLine = '';
+                                } else {
+                                    wrappedLines.push(token);
+                                    currentLine = '';
                                 }
                             }
                         }
-                        if (currentLine.trim() !== '') {
-                            wrappedLines.push(currentLine.trimEnd());
-                        }
+                    }
+                    if (currentLine.trim() !== '') {
+                        wrappedLines.push(currentLine.trimEnd());
+                    }
+                }
+
+                if (wrappedLines.length === 0) wrappedLines.push(' ');
+                return wrappedLines;
+            }
+
+            // ---------- 1. Download as Book-style PDF ----------
+            async function downloadBookPdf() {
+                const text = contentInput.value.trim();
+                if (!text) {
+                    setStatus('Cannot create book: content is empty.', 'warning');
+                    return;
+                }
+
+                const title = (bookTitleInput.value.trim() || 'Untitled Book');
+                const author = (bookAuthorInput.value.trim() || 'Anonymous');
+
+                try {
+                    setStatus('Binding your book…', 'info');
+                    const { PDFDocument, StandardFonts, rgb } = window.PDFLib;
+
+                    const pdfDoc = await PDFDocument.create();
+
+                    // ---- Fonts (serif for book feel) ----
+                    const serifFont = await pdfDoc.embedFont(StandardFonts.TimesRoman);
+                    const serifBold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
+                    const serifItalic = await pdfDoc.embedFont(StandardFonts.TimesRomanItalic);
+
+                    // ---- Book page dimensions (A5-ish, nice for books) ----
+                    // Using A5: 419.53 x 595.28 points
+                    const pageWidth = 419.53;
+                    const pageHeight = 595.28;
+
+                    // ---- Colors ----
+                    const darkBrown = rgb(0.28, 0.18, 0.10);
+                    const midBrown = rgb(0.45, 0.32, 0.20);
+                    const lightCream = rgb(0.98, 0.96, 0.92);
+
+                    // ============================================
+                    //  COVER PAGE
+                    // ============================================
+                    const coverPage = pdfDoc.addPage([pageWidth, pageHeight]);
+
+                    // Full background cream color
+                    coverPage.drawRectangle({
+                        x: 0, y: 0,
+                        width: pageWidth,
+                        height: pageHeight,
+                        color: lightCream,
+                    });
+
+                    // Decorative border
+                    coverPage.drawRectangle({
+                        x: 20, y: 20,
+                        width: pageWidth - 40,
+                        height: pageHeight - 40,
+                        borderColor: midBrown,
+                        borderWidth: 2,
+                        borderOpacity: 0.6,
+                    });
+
+                    coverPage.drawRectangle({
+                        x: 26, y: 26,
+                        width: pageWidth - 52,
+                        height: pageHeight - 52,
+                        borderColor: midBrown,
+                        borderWidth: 0.8,
+                        borderOpacity: 0.4,
+                    });
+
+                    // Title (centered, bold serif)
+                    const titleFontSize = 28;
+                    const titleWidth = serifBold.widthOfTextAtSize(title, titleFontSize);
+                    const titleY = pageHeight * 0.62;
+
+                    coverPage.drawText(title, {
+                        x: (pageWidth - titleWidth) / 2,
+                        y: titleY,
+                        size: titleFontSize,
+                        font: serifBold,
+                        color: darkBrown,
+                    });
+
+                    // Decorative line under title
+                    coverPage.drawLine({
+                        start: { x: pageWidth * 0.25, y: titleY - 18 },
+                        end: { x: pageWidth * 0.75, y: titleY - 18 },
+                        thickness: 1.2,
+                        color: midBrown,
+                        opacity: 0.6,
+                    });
+
+                    // Subtitle / "A Book By"
+                    const subtitleText = 'A Book By';
+                    const subtitleSize = 11;
+                    const subtitleWidth = serifItalic.widthOfTextAtSize(subtitleText, subtitleSize);
+                    coverPage.drawText(subtitleText, {
+                        x: (pageWidth - subtitleWidth) / 2,
+                        y: pageHeight * 0.48,
+                        size: subtitleSize,
+                        font: serifItalic,
+                        color: midBrown,
+                    });
+
+                    // Author name
+                    const authorFontSize = 18;
+                    const authorWidth = serifFont.widthOfTextAtSize(author, authorFontSize);
+                    coverPage.drawText(author, {
+                        x: (pageWidth - authorWidth) / 2,
+                        y: pageHeight * 0.43,
+                        size: authorFontSize,
+                        font: serifFont,
+                        color: darkBrown,
+                    });
+
+                    // Small decorative ornament
+                    const ornament = '❦';
+                    const ornamentSize = 20;
+                    const ornamentWidth = serifFont.widthOfTextAtSize(ornament, ornamentSize);
+                    coverPage.drawText(ornament, {
+                        x: (pageWidth - ornamentWidth) / 2,
+                        y: pageHeight * 0.30,
+                        size: ornamentSize,
+                        font: serifFont,
+                        color: midBrown,
+                    });
+
+                    // Year at bottom
+                    const year = new Date().getFullYear().toString();
+                    const yearSize = 10;
+                    const yearWidth = serifFont.widthOfTextAtSize(year, yearSize);
+                    coverPage.drawText(year, {
+                        x: (pageWidth - yearWidth) / 2,
+                        y: 55,
+                        size: yearSize,
+                        font: serifFont,
+                        color: midBrown,
+                    });
+
+                    // ============================================
+                    //  CONTENT PAGES
+                    // ============================================
+                    const marginTop = 70;
+                    const marginBottom = 70;
+                    const marginLeft = 55;
+                    const marginRight = 55;
+                    const contentFontSize = 10.5;
+                    const lineHeight = contentFontSize * 1.6;
+                    const contentMaxWidth = pageWidth - marginLeft - marginRight;
+
+                    // Wrap the text
+                    const wrappedLines = wrapText(text, serifFont, contentFontSize, contentMaxWidth);
+
+                    // Running header text (truncated title)
+                    const headerText = title.length > 40 ? title.substring(0, 38) + '…' : title;
+
+                    let pageNum = 1; // content page counter (starts at 1 after cover)
+                    let currentPage = null;
+                    let y = 0;
+
+                    // Helper to start a new content page
+                    function startNewPage() {
+                        currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+
+                        // Cream background
+                        currentPage.drawRectangle({
+                            x: 0, y: 0,
+                            width: pageWidth,
+                            height: pageHeight,
+                            color: rgb(0.995, 0.985, 0.965),
+                        });
+
+                        // Running header (book title, italic, small, centered top)
+                        const headerSize = 8;
+                        const headerWidth = serifItalic.widthOfTextAtSize(headerText, headerSize);
+                        currentPage.drawText(headerText, {
+                            x: (pageWidth - headerWidth) / 2,
+                            y: pageHeight - 38,
+                            size: headerSize,
+                            font: serifItalic,
+                            color: midBrown,
+                            opacity: 0.7,
+                        });
+
+                        // Thin header rule
+                        currentPage.drawLine({
+                            start: { x: marginLeft, y: pageHeight - 48 },
+                            end: { x: pageWidth - marginRight, y: pageHeight - 48 },
+                            thickness: 0.5,
+                            color: midBrown,
+                            opacity: 0.3,
+                        });
+
+                        // Page number at bottom center
+                        const pageNumStr = pageNum.toString();
+                        const pageNumSize = 9;
+                        const pageNumWidth = serifFont.widthOfTextAtSize(pageNumStr, pageNumSize);
+                        currentPage.drawText(pageNumStr, {
+                            x: (pageWidth - pageNumWidth) / 2,
+                            y: 40,
+                            size: pageNumSize,
+                            font: serifFont,
+                            color: midBrown,
+                            opacity: 0.75,
+                        });
+
+                        // Small ornaments beside page number
+                        const ornSize = 7;
+                        currentPage.drawText('❧', {
+                            x: (pageWidth / 2) - 25,
+                            y: 40,
+                            size: ornSize,
+                            font: serifFont,
+                            color: midBrown,
+                            opacity: 0.5,
+                        });
+                        currentPage.drawText('☙', {
+                            x: (pageWidth / 2) + 15,
+                            y: 40,
+                            size: ornSize,
+                            font: serifFont,
+                            color: midBrown,
+                            opacity: 0.5,
+                        });
+
+                        y = pageHeight - marginTop;
                     }
 
-                    if (wrappedLines.length === 0) {
-                        wrappedLines.push(' ');
-                    }
+                    // Start the first content page
+                    startNewPage();
 
-                    let page = pdfDoc.addPage([pageWidth, pageHeight]);
-                    let y = pageHeight - margin;
-
+                    // Draw each wrapped line
                     for (let i = 0; i < wrappedLines.length; i++) {
                         const lineText = wrappedLines[i];
-                        if (y - lineHeight < margin) {
-                            page = pdfDoc.addPage([pageWidth, pageHeight]);
-                            y = pageHeight - margin;
+
+                        // New page if needed
+                        if (y - lineHeight < marginBottom) {
+                            pageNum++;
+                            startNewPage();
                         }
 
                         if (lineText.trim() !== '') {
-                            page.drawText(lineText, {
-                                x: margin,
-                                y: y - fontSize,
-                                size: fontSize,
-                                font: font,
-                                color: rgb(0.1, 0.1, 0.15),
+                            // Detect chapter headings: short line, not ending with punctuation, all caps or title-ish
+                            const isLikelyHeading =
+                                lineText.length < 50 &&
+                                !/[.,;:!?]$/.test(lineText.trim()) &&
+                                /^[A-Z0-9]/.test(lineText.trim()) &&
+                                wrappedLines[i + 1] !== undefined &&
+                                wrappedLines[i + 1].trim() === '';
+
+                            if (isLikelyHeading) {
+                                // Draw heading centered, bold, with extra spacing
+                                const headSize = 12.5;
+                                const headWidth = serifBold.widthOfTextAtSize(lineText, headSize);
+                                // If too wide, use regular draw
+                                if (headWidth <= contentMaxWidth) {
+                                    currentPage.drawText(lineText, {
+                                        x: (pageWidth - headWidth) / 2,
+                                        y: y - headSize,
+                                        size: headSize,
+                                        font: serifBold,
+                                        color: darkBrown,
+                                    });
+                                    y -= lineHeight * 1.4;
+                                    continue;
+                                }
+                            }
+
+                            // Regular paragraph line with first-line indent simulation
+                            currentPage.drawText(lineText, {
+                                x: marginLeft,
+                                y: y - contentFontSize,
+                                size: contentFontSize,
+                                font: serifFont,
+                                color: rgb(0.15, 0.10, 0.07),
+                                lineHeight: lineHeight,
                             });
                         }
-                        
+
                         y -= lineHeight;
                     }
 
+                    // ============================================
+                    //  BACK PAGE (The End)
+                    // ============================================
+                    const backPage = pdfDoc.addPage([pageWidth, pageHeight]);
+                    backPage.drawRectangle({
+                        x: 0, y: 0,
+                        width: pageWidth,
+                        height: pageHeight,
+                        color: lightCream,
+                    });
+
+                    const endText = 'The End';
+                    const endSize = 22;
+                    const endWidth = serifBold.widthOfTextAtSize(endText, endSize);
+                    backPage.drawText(endText, {
+                        x: (pageWidth - endWidth) / 2,
+                        y: pageHeight * 0.55,
+                        size: endSize,
+                        font: serifBold,
+                        color: darkBrown,
+                    });
+
+                    const ornSize2 = 16;
+                    const ornWidth = serifFont.widthOfTextAtSize('❦', ornSize2);
+                    backPage.drawText('❦', {
+                        x: (pageWidth - ornWidth) / 2,
+                        y: pageHeight * 0.47,
+                        size: ornSize2,
+                        font: serifFont,
+                        color: midBrown,
+                    });
+
+                    // ============================================
+                    //  SAVE & DOWNLOAD
+                    // ============================================
                     const pdfBytes = await pdfDoc.save();
                     const blob = new Blob([pdfBytes], { type: 'application/pdf' });
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `pdf-writer-${Date.now()}.pdf`;
+                    const safeTitle = title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                    a.download = `${safeTitle || 'book'}.pdf`;
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
                     setTimeout(() => URL.revokeObjectURL(url), 1500);
 
-                    setStatus('PDF downloaded successfully!', 'success');
+                    setStatus(`Book "${title}" downloaded! ${pageNum} content page${pageNum > 1 ? 's' : ''} + cover.`, 'success');
                 } catch (error) {
-                    console.error('PDF generation error:', error);
-                    setStatus('Error generating PDF: ' + (error.message || 'unknown'), 'warning');
+                    console.error('Book PDF generation error:', error);
+                    setStatus('Error creating book PDF: ' + (error.message || 'unknown'), 'warning');
                 }
             }
 
             // ---------- 2. Save to LocalStorage ----------
             function saveToLocalStorage() {
-                const text = contentInput.value;
                 try {
-                    localStorage.setItem(STORAGE_KEY, text);
-                    setStatus('Content saved to localStorage.', 'success');
+                    localStorage.setItem(STORAGE_KEY, contentInput.value);
+                    localStorage.setItem(STORAGE_TITLE_KEY, bookTitleInput.value);
+                    localStorage.setItem(STORAGE_AUTHOR_KEY, bookAuthorInput.value);
+                    setStatus('Book content, title & author saved.', 'success');
                 } catch (e) {
                     setStatus('Failed to save: ' + e.message, 'warning');
                 }
@@ -397,11 +745,16 @@ Download generates a real PDF file using pdf-lib.`;
             function loadFromLocalStorage() {
                 try {
                     const saved = localStorage.getItem(STORAGE_KEY);
+                    const savedTitle = localStorage.getItem(STORAGE_TITLE_KEY);
+                    const savedAuthor = localStorage.getItem(STORAGE_AUTHOR_KEY);
+
                     if (saved !== null) {
                         contentInput.value = saved;
-                        setStatus('Loaded saved content from localStorage.', 'success');
+                        if (savedTitle !== null) bookTitleInput.value = savedTitle;
+                        if (savedAuthor !== null) bookAuthorInput.value = savedAuthor;
+                        setStatus('Book loaded from localStorage.', 'success');
                     } else {
-                        setStatus('No saved content found in localStorage.', 'warning');
+                        setStatus('No saved book found in localStorage.', 'warning');
                     }
                 } catch (e) {
                     setStatus('Error reading localStorage: ' + e.message, 'warning');
@@ -412,7 +765,9 @@ Download generates a real PDF file using pdf-lib.`;
             function clearSavedStorage() {
                 try {
                     localStorage.removeItem(STORAGE_KEY);
-                    setStatus('Saved content removed from localStorage.', 'success');
+                    localStorage.removeItem(STORAGE_TITLE_KEY);
+                    localStorage.removeItem(STORAGE_AUTHOR_KEY);
+                    setStatus('Saved book removed from localStorage.', 'success');
                 } catch (e) {
                     setStatus('Error clearing storage: ' + e.message, 'warning');
                 }
@@ -424,9 +779,13 @@ Download generates a real PDF file using pdf-lib.`;
                     const saved = localStorage.getItem(STORAGE_KEY);
                     if (saved !== null) {
                         contentInput.value = saved;
-                        setStatus('Loaded previous content from localStorage.', 'info');
+                        const savedTitle = localStorage.getItem(STORAGE_TITLE_KEY);
+                        const savedAuthor = localStorage.getItem(STORAGE_AUTHOR_KEY);
+                        if (savedTitle !== null) bookTitleInput.value = savedTitle;
+                        if (savedAuthor !== null) bookAuthorInput.value = savedAuthor;
+                        setStatus('Loaded previous book from localStorage.', 'info');
                     } else {
-                        setStatus('Ready. Write something and click Download PDF.', 'info');
+                        setStatus('Ready. Write your book and click "Download as Book PDF".', 'info');
                     }
                 } catch (e) {
                     setStatus('LocalStorage unavailable, using default text.', 'warning');
@@ -435,7 +794,7 @@ Download generates a real PDF file using pdf-lib.`;
             }
 
             // ---------- Attach event listeners ----------
-            downloadBtn.addEventListener('click', downloadPdf);
+            downloadBtn.addEventListener('click', downloadBookPdf);
             saveBtn.addEventListener('click', saveToLocalStorage);
             loadBtn.addEventListener('click', loadFromLocalStorage);
             clearBtn.addEventListener('click', clearSavedStorage);
@@ -447,10 +806,10 @@ Download generates a real PDF file using pdf-lib.`;
             contentInput.addEventListener('keydown', (e) => {
                 if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
                     e.preventDefault();
-                    downloadPdf();
+                    downloadBookPdf();
                 }
             });
         })();
     </script>
 </body>
-</html>
+    </html>

@@ -339,6 +339,34 @@ On the central table lay a single book, bound in deep blue leather with gold let
                 }
             }
 
+            // ---------- Helper: sanitize text for WinAnsi (standard PDF fonts) ----------
+            // Removes/replaces characters that cannot be encoded in WinAnsi
+            function sanitizeForWinAnsi(text) {
+                // WinAnsi supports: ASCII + Latin-1 supplement (approx.)
+                // We'll strip anything outside a safe set to avoid encoding errors.
+                // Allowed: printable ASCII (0x20-0x7E), plus Latin-1 letters, plus common punctuation.
+                return text
+                    .split('')
+                    .map(ch => {
+                        const code = ch.charCodeAt(0);
+                        // Keep printable ASCII
+                        if (code >= 0x20 && code <= 0x7E) return ch;
+                        // Keep common Latin-1 characters (accented letters, etc.)
+                        if (code >= 0xA0 && code <= 0xFF) return ch;
+                        // Keep tab and newline (though split by lines anyway)
+                        if (ch === '\t' || ch === '\n' || ch === '\r') return ch;
+                        // Special replacements for common Unicode chars
+                        if (ch === '—' || ch === '–') return '-';
+                        if (ch === '“' || ch === '”') return '"';
+                        if (ch === '‘' || ch === '’') return "'";
+                        if (ch === '…') return '...';
+                        if (ch === '•') return '*';
+                        // Drop everything else (emoji, ornaments, CJK, etc.)
+                        return '';
+                    })
+                    .join('');
+            }
+
             // ---------- Helper: wrap text to fit width ----------
             function wrapText(text, font, fontSize, maxWidth) {
                 const wrappedLines = [];
@@ -356,7 +384,13 @@ On the central table lay a single book, bound in deep blue leather with gold let
                     for (let token of words) {
                         if (token === '') continue;
                         const testLine = currentLine + token;
-                        const testWidth = font.widthOfTextAtSize(testLine, fontSize);
+                        let testWidth;
+                        try {
+                            testWidth = font.widthOfTextAtSize(testLine, fontSize);
+                        } catch (e) {
+                            // If a character slips through, skip the token
+                            continue;
+                        }
 
                         if (testWidth <= maxWidth) {
                             currentLine = testLine;
@@ -366,13 +400,25 @@ On the central table lay a single book, bound in deep blue leather with gold let
                                 currentLine = token;
                             } else {
                                 // Handle very long single word
-                                if (font.widthOfTextAtSize(token, fontSize) > maxWidth) {
+                                let wordWidth;
+                                try {
+                                    wordWidth = font.widthOfTextAtSize(token, fontSize);
+                                } catch (e) {
+                                    wordWidth = maxWidth + 1; // force chunking
+                                }
+                                if (wordWidth > maxWidth) {
                                     let remaining = token;
                                     while (remaining.length > 0) {
                                         let chunk = '';
                                         for (let i = 1; i <= remaining.length; i++) {
                                             const sub = remaining.substring(0, i);
-                                            if (font.widthOfTextAtSize(sub, fontSize) <= maxWidth) {
+                                            let subWidth;
+                                            try {
+                                                subWidth = font.widthOfTextAtSize(sub, fontSize);
+                                            } catch (e) {
+                                                subWidth = maxWidth + 1;
+                                            }
+                                            if (subWidth <= maxWidth) {
                                                 chunk = sub;
                                             } else {
                                                 break;
@@ -401,14 +447,16 @@ On the central table lay a single book, bound in deep blue leather with gold let
 
             // ---------- 1. Download as Book-style PDF ----------
             async function downloadBookPdf() {
-                const text = contentInput.value.trim();
-                if (!text) {
+                const rawText = contentInput.value.trim();
+                if (!rawText) {
                     setStatus('Cannot create book: content is empty.', 'warning');
                     return;
                 }
 
-                const title = (bookTitleInput.value.trim() || 'Untitled Book');
-                const author = (bookAuthorInput.value.trim() || 'Anonymous');
+                // Sanitize all text for WinAnsi encoding
+                const text = sanitizeForWinAnsi(rawText);
+                const title = sanitizeForWinAnsi(bookTitleInput.value.trim() || 'Untitled Book');
+                const author = sanitizeForWinAnsi(bookAuthorInput.value.trim() || 'Anonymous');
 
                 try {
                     setStatus('Binding your book…', 'info');
@@ -421,8 +469,7 @@ On the central table lay a single book, bound in deep blue leather with gold let
                     const serifBold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
                     const serifItalic = await pdfDoc.embedFont(StandardFonts.TimesRomanItalic);
 
-                    // ---- Book page dimensions (A5-ish, nice for books) ----
-                    // Using A5: 419.53 x 595.28 points
+                    // ---- Book page dimensions (A5) ----
                     const pageWidth = 419.53;
                     const pageHeight = 595.28;
 
@@ -436,7 +483,6 @@ On the central table lay a single book, bound in deep blue leather with gold let
                     // ============================================
                     const coverPage = pdfDoc.addPage([pageWidth, pageHeight]);
 
-                    // Full background cream color
                     coverPage.drawRectangle({
                         x: 0, y: 0,
                         width: pageWidth,
@@ -463,23 +509,29 @@ On the central table lay a single book, bound in deep blue leather with gold let
                         borderOpacity: 0.4,
                     });
 
-                    // Title (centered, bold serif)
-                    const titleFontSize = 28;
-                    const titleWidth = serifBold.widthOfTextAtSize(title, titleFontSize);
-                    const titleY = pageHeight * 0.62;
+                    // Title (centered, bold serif) — with word-wrap if long
+                    const titleFontSize = 26;
+                    const titleMaxWidth = pageWidth - 100;
+                    const titleLines = wrapText(title, serifBold, titleFontSize, titleMaxWidth);
 
-                    coverPage.drawText(title, {
-                        x: (pageWidth - titleWidth) / 2,
-                        y: titleY,
-                        size: titleFontSize,
-                        font: serifBold,
-                        color: darkBrown,
+                    let titleY = pageHeight * 0.68;
+                    titleLines.forEach((line) => {
+                        if (line.trim() === '') return;
+                        const w = serifBold.widthOfTextAtSize(line, titleFontSize);
+                        coverPage.drawText(line, {
+                            x: (pageWidth - w) / 2,
+                            y: titleY,
+                            size: titleFontSize,
+                            font: serifBold,
+                            color: darkBrown,
+                        });
+                        titleY -= titleFontSize * 1.3;
                     });
 
                     // Decorative line under title
                     coverPage.drawLine({
-                        start: { x: pageWidth * 0.25, y: titleY - 18 },
-                        end: { x: pageWidth * 0.75, y: titleY - 18 },
+                        start: { x: pageWidth * 0.25, y: titleY - 6 },
+                        end: { x: pageWidth * 0.75, y: titleY - 6 },
                         thickness: 1.2,
                         color: midBrown,
                         opacity: 0.6,
@@ -508,9 +560,9 @@ On the central table lay a single book, bound in deep blue leather with gold let
                         color: darkBrown,
                     });
 
-                    // Small decorative ornament
-                    const ornament = '❦';
-                    const ornamentSize = 20;
+                    // Ornament (ASCII-safe)
+                    const ornament = '* * *';
+                    const ornamentSize = 14;
                     const ornamentWidth = serifFont.widthOfTextAtSize(ornament, ornamentSize);
                     coverPage.drawText(ornament, {
                         x: (pageWidth - ornamentWidth) / 2,
@@ -543,21 +595,18 @@ On the central table lay a single book, bound in deep blue leather with gold let
                     const lineHeight = contentFontSize * 1.6;
                     const contentMaxWidth = pageWidth - marginLeft - marginRight;
 
-                    // Wrap the text
                     const wrappedLines = wrapText(text, serifFont, contentFontSize, contentMaxWidth);
 
-                    // Running header text (truncated title)
-                    const headerText = title.length > 40 ? title.substring(0, 38) + '…' : title;
+                    // Running header (truncated title)
+                    const headerText = title.length > 40 ? title.substring(0, 38) + '...' : title;
 
-                    let pageNum = 1; // content page counter (starts at 1 after cover)
+                    let pageNum = 1;
                     let currentPage = null;
                     let y = 0;
 
-                    // Helper to start a new content page
                     function startNewPage() {
                         currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
 
-                        // Cream background
                         currentPage.drawRectangle({
                             x: 0, y: 0,
                             width: pageWidth,
@@ -565,7 +614,7 @@ On the central table lay a single book, bound in deep blue leather with gold let
                             color: rgb(0.995, 0.985, 0.965),
                         });
 
-                        // Running header (book title, italic, small, centered top)
+                        // Running header
                         const headerSize = 8;
                         const headerWidth = serifItalic.widthOfTextAtSize(headerText, headerSize);
                         currentPage.drawText(headerText, {
@@ -577,7 +626,7 @@ On the central table lay a single book, bound in deep blue leather with gold let
                             opacity: 0.7,
                         });
 
-                        // Thin header rule
+                        // Header rule
                         currentPage.drawLine({
                             start: { x: marginLeft, y: pageHeight - 48 },
                             end: { x: pageWidth - marginRight, y: pageHeight - 48 },
@@ -586,7 +635,7 @@ On the central table lay a single book, bound in deep blue leather with gold let
                             opacity: 0.3,
                         });
 
-                        // Page number at bottom center
+                        // Page number
                         const pageNumStr = pageNum.toString();
                         const pageNumSize = 9;
                         const pageNumWidth = serifFont.widthOfTextAtSize(pageNumStr, pageNumSize);
@@ -599,19 +648,19 @@ On the central table lay a single book, bound in deep blue leather with gold let
                             opacity: 0.75,
                         });
 
-                        // Small ornaments beside page number
-                        const ornSize = 7;
-                        currentPage.drawText('❧', {
-                            x: (pageWidth / 2) - 25,
-                            y: 40,
+                        // Ornaments (ASCII-safe)
+                        const ornSize = 8;
+                        currentPage.drawText('~', {
+                            x: (pageWidth / 2) - 22,
+                            y: 41,
                             size: ornSize,
                             font: serifFont,
                             color: midBrown,
                             opacity: 0.5,
                         });
-                        currentPage.drawText('☙', {
-                            x: (pageWidth / 2) + 15,
-                            y: 40,
+                        currentPage.drawText('~', {
+                            x: (pageWidth / 2) + 14,
+                            y: 41,
                             size: ornSize,
                             font: serifFont,
                             color: midBrown,
@@ -621,21 +670,18 @@ On the central table lay a single book, bound in deep blue leather with gold let
                         y = pageHeight - marginTop;
                     }
 
-                    // Start the first content page
                     startNewPage();
 
-                    // Draw each wrapped line
                     for (let i = 0; i < wrappedLines.length; i++) {
                         const lineText = wrappedLines[i];
 
-                        // New page if needed
                         if (y - lineHeight < marginBottom) {
                             pageNum++;
                             startNewPage();
                         }
 
                         if (lineText.trim() !== '') {
-                            // Detect chapter headings: short line, not ending with punctuation, all caps or title-ish
+                            // Detect chapter headings
                             const isLikelyHeading =
                                 lineText.length < 50 &&
                                 !/[.,;:!?]$/.test(lineText.trim()) &&
@@ -644,10 +690,8 @@ On the central table lay a single book, bound in deep blue leather with gold let
                                 wrappedLines[i + 1].trim() === '';
 
                             if (isLikelyHeading) {
-                                // Draw heading centered, bold, with extra spacing
                                 const headSize = 12.5;
                                 const headWidth = serifBold.widthOfTextAtSize(lineText, headSize);
-                                // If too wide, use regular draw
                                 if (headWidth <= contentMaxWidth) {
                                     currentPage.drawText(lineText, {
                                         x: (pageWidth - headWidth) / 2,
@@ -661,7 +705,6 @@ On the central table lay a single book, bound in deep blue leather with gold let
                                 }
                             }
 
-                            // Regular paragraph line with first-line indent simulation
                             currentPage.drawText(lineText, {
                                 x: marginLeft,
                                 y: y - contentFontSize,
@@ -686,7 +729,7 @@ On the central table lay a single book, bound in deep blue leather with gold let
                         color: lightCream,
                     });
 
-                    const endText = 'The End';
+                    const endText = 'THE END';
                     const endSize = 22;
                     const endWidth = serifBold.widthOfTextAtSize(endText, endSize);
                     backPage.drawText(endText, {
@@ -697,9 +740,10 @@ On the central table lay a single book, bound in deep blue leather with gold let
                         color: darkBrown,
                     });
 
-                    const ornSize2 = 16;
-                    const ornWidth = serifFont.widthOfTextAtSize('❦', ornSize2);
-                    backPage.drawText('❦', {
+                    const ornText = '* * *';
+                    const ornSize2 = 14;
+                    const ornWidth = serifFont.widthOfTextAtSize(ornText, ornSize2);
+                    backPage.drawText(ornText, {
                         x: (pageWidth - ornWidth) / 2,
                         y: pageHeight * 0.47,
                         size: ornSize2,
@@ -812,4 +856,4 @@ On the central table lay a single book, bound in deep blue leather with gold let
         })();
     </script>
 </body>
-    </html>
+</html>

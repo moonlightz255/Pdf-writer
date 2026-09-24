@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PDF Writer · download & local storage</title>
+    <meta name="description" content="A simple in-browser PDF writer. Type text, download as PDF, and save to local storage.">
     <!-- PDF-lib for creating PDFs -->
     <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
     <style>
@@ -242,7 +243,6 @@ Download generates a real PDF file using pdf-lib.</textarea>
 
             // ---------- Constants ----------
             const STORAGE_KEY = 'pdf_writer_content';
-            // Default text (also used when nothing loaded)
             const DEFAULT_TEXT = `PDF created with PDF Writer ✨
 
 This text is stored in local storage when you click 'Save to LocalStorage'.
@@ -250,7 +250,6 @@ Download generates a real PDF file using pdf-lib.`;
 
             // ---------- Helper: update status ----------
             function setStatus(message, type = 'info') {
-                // type: 'info', 'success', 'warning'
                 statusText.textContent = message;
                 statusDiv.classList.remove('success', 'warning');
                 if (type === 'success') {
@@ -262,14 +261,6 @@ Download generates a real PDF file using pdf-lib.`;
                 } else {
                     iconSpan.textContent = '📌';
                 }
-                // Auto reset icon after 2.5 sec if success/warning? we keep as is.
-            }
-
-            // Reset to info icon after some time (optional)
-            function resetStatusIconLater() {
-                // Not strictly needed, but nice: after 3 sec, remove extra classes and set info icon.
-                // But we want the message to stay, so we only downgrade the icon/class slowly? 
-                // We'll keep it simple: only change when new status occurs.
             }
 
             // ---------- 1. Download as PDF (using pdf-lib) ----------
@@ -282,35 +273,27 @@ Download generates a real PDF file using pdf-lib.`;
 
                 try {
                     setStatus('Generating PDF…', 'info');
-                    // pdf-lib access via window.PDFLib
                     const { PDFDocument, StandardFonts, rgb } = window.PDFLib;
 
-                    // Create a new PDF document
                     const pdfDoc = await PDFDocument.create();
-                    // Embed the standard font (Helvetica)
                     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
                     
-                    // Page dimensions (A4: 595.28 x 841.89 points)
                     const pageWidth = 595.28;
                     const pageHeight = 841.89;
-                    const margin = 56; // ~2cm margin
+                    const margin = 56;
                     const fontSize = 12;
-                    const lineHeight = fontSize * 1.5; // 18
-                    const maxWidth = pageWidth - 2 * margin; // 483.28
+                    const lineHeight = fontSize * 1.5;
+                    const maxWidth = pageWidth - 2 * margin;
 
-                    // Split text into lines (handle explicit newlines)
                     const rawLines = text.split(/\r?\n/);
-                    
-                    // We'll wrap each raw line to fit maxWidth
                     const wrappedLines = [];
+
                     for (let line of rawLines) {
                         if (line.trim() === '') {
-                            // preserve empty lines
                             wrappedLines.push('');
                             continue;
                         }
-                        // Split into words (but keep spaces for wrapping)
-                        const words = line.split(/(\s+)/); // keeps whitespace as tokens
+                        const words = line.split(/(\s+)/);
                         let currentLine = '';
                         
                         for (let token of words) {
@@ -321,15 +304,11 @@ Download generates a real PDF file using pdf-lib.`;
                             if (testWidth <= maxWidth) {
                                 currentLine = testLine;
                             } else {
-                                // If currentLine is not empty, push it and start new line with token
                                 if (currentLine.trim() !== '') {
-                                    wrappedLines.push(currentLine.trimEnd()); // trim trailing spaces
+                                    wrappedLines.push(currentLine.trimEnd());
                                     currentLine = token;
                                 } else {
-                                    // Very long word or token: break it arbitrarily (basic handling)
-                                    // We'll split the token if it's longer than maxWidth
                                     if (font.widthOfTextAtSize(token, fontSize) > maxWidth) {
-                                        // break token into chunks
                                         let remaining = token;
                                         while (remaining.length > 0) {
                                             let chunk = '';
@@ -341,68 +320,51 @@ Download generates a real PDF file using pdf-lib.`;
                                                     break;
                                                 }
                                             }
-                                            if (chunk === '') chunk = remaining.charAt(0); // fallback
+                                            if (chunk === '') chunk = remaining.charAt(0);
                                             wrappedLines.push(chunk);
                                             remaining = remaining.substring(chunk.length);
                                         }
                                         currentLine = '';
                                     } else {
-                                        // token fits on its own line but currentLine is empty? 
-                                        // Actually currentLine might be empty, push token as line
                                         wrappedLines.push(token);
                                         currentLine = '';
                                     }
                                 }
                             }
                         }
-                        // push remaining currentLine
                         if (currentLine.trim() !== '') {
                             wrappedLines.push(currentLine.trimEnd());
-                        } else if (currentLine === '' && line === '') {
-                            // already handled empty line
                         }
                     }
 
-                    // If no wrapped lines (empty text?) we should have at least one line
                     if (wrappedLines.length === 0) {
                         wrappedLines.push(' ');
                     }
 
-                    // Now create pages
                     let page = pdfDoc.addPage([pageWidth, pageHeight]);
-                    let y = pageHeight - margin; // start at top margin
+                    let y = pageHeight - margin;
 
                     for (let i = 0; i < wrappedLines.length; i++) {
                         const lineText = wrappedLines[i];
-                        // Check if we need a new page (if y - lineHeight < margin)
                         if (y - lineHeight < margin) {
-                            // add new page
                             page = pdfDoc.addPage([pageWidth, pageHeight]);
                             y = pageHeight - margin;
                         }
 
-                        // Draw the line if not completely empty (avoid drawing empty strings)
                         if (lineText.trim() !== '') {
                             page.drawText(lineText, {
                                 x: margin,
-                                y: y - fontSize, // adjust baseline
+                                y: y - fontSize,
                                 size: fontSize,
                                 font: font,
                                 color: rgb(0.1, 0.1, 0.15),
                             });
-                        } else {
-                            // for empty lines, we still consume vertical space
-                            // but we don't draw
                         }
                         
                         y -= lineHeight;
                     }
 
-                    // If no page has been added? Already added at least one.
-                    // Serialize the PDF to bytes
                     const pdfBytes = await pdfDoc.save();
-
-                    // Create a Blob and download
                     const blob = new Blob([pdfBytes], { type: 'application/pdf' });
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
@@ -411,7 +373,6 @@ Download generates a real PDF file using pdf-lib.`;
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
-                    // Clean up
                     setTimeout(() => URL.revokeObjectURL(url), 1500);
 
                     setStatus('PDF downloaded successfully!', 'success');
@@ -428,7 +389,6 @@ Download generates a real PDF file using pdf-lib.`;
                     localStorage.setItem(STORAGE_KEY, text);
                     setStatus('Content saved to localStorage.', 'success');
                 } catch (e) {
-                    // localStorage might be full or disabled
                     setStatus('Failed to save: ' + e.message, 'warning');
                 }
             }
@@ -452,15 +412,13 @@ Download generates a real PDF file using pdf-lib.`;
             function clearSavedStorage() {
                 try {
                     localStorage.removeItem(STORAGE_KEY);
-                    // If current text is exactly the default? We do not change the text area.
                     setStatus('Saved content removed from localStorage.', 'success');
                 } catch (e) {
                     setStatus('Error clearing storage: ' + e.message, 'warning');
                 }
             }
 
-            // ---------- 5. Initialize: optionally load saved content on page load? ----------
-            // We will load saved content if exists, otherwise leave default.
+            // ---------- 5. Initialize from storage ----------
             function initializeFromStorage() {
                 try {
                     const saved = localStorage.getItem(STORAGE_KEY);
@@ -468,13 +426,10 @@ Download generates a real PDF file using pdf-lib.`;
                         contentInput.value = saved;
                         setStatus('Loaded previous content from localStorage.', 'info');
                     } else {
-                        // keep default text
                         setStatus('Ready. Write something and click Download PDF.', 'info');
                     }
                 } catch (e) {
-                    // localStorage error (e.g., disabled)
                     setStatus('LocalStorage unavailable, using default text.', 'warning');
-                    // ensure default text if not set
                     if (!contentInput.value) contentInput.value = DEFAULT_TEXT;
                 }
             }
@@ -485,25 +440,17 @@ Download generates a real PDF file using pdf-lib.`;
             loadBtn.addEventListener('click', loadFromLocalStorage);
             clearBtn.addEventListener('click', clearSavedStorage);
 
-            // Bonus: Auto-save on window unload? Not required, skip to avoid confusion.
-
             // Initialize
             initializeFromStorage();
 
-            // Small UX: Pressing Ctrl+Enter downloads (optional)
+            // Ctrl+Enter to download
             contentInput.addEventListener('keydown', (e) => {
                 if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
                     e.preventDefault();
                     downloadPdf();
                 }
             });
-
-            // Make sure that if user manually clears text area, we don't auto-save etc.
-            // (No action needed)
-
-            // Ensure status icon resets to info after a while? We can do a simple timer
-            // but not necessary. However, we can add a small click-to-dismiss? Not needed.
         })();
     </script>
 </body>
-  </html>
+</html>
